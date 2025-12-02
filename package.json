@@ -1,0 +1,14 @@
+{
+  "name": "pinterest-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "start:backend": "npm --prefix backend start",
+    "start:frontend": "npm --prefix frontend preview",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
