@@ -85,7 +85,7 @@ const CreatePin = () => {
       }
       const isBackendConnected = await checkBackendConnection();
       if (!isBackendConnected) {
-        setError('Cannot connect to server. Please make sure the backend is running on localhost:5000');
+        setError(`Cannot connect to server. Please make sure the backend is running on ${API_URL}`);
         return;
       }
 
@@ -124,7 +124,7 @@ const CreatePin = () => {
     } catch (err) {
       console.error('Error creating pin:', err);
       if (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error')) {
-        setError('Cannot connect to server. Please check if the backend is running on localhost:5000');
+        setError(`Cannot connect to server. Please check if the backend is running on ${API_URL}`);
       } else if (err.response?.status === 401) {
         setError('Session expired. Please login again.');
         localStorage.removeItem('token');

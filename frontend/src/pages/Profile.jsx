@@ -581,7 +581,7 @@ const Profile = () => {
           <div className="mt-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Your Pins</h2>
             {pins.length > 0 ? (
-              <MasonryGrid pins={pins} />
+              <MasonryGrid pins={pins} onEdit={startEdit} onDelete={confirmDelete} />
             ) : (
               <div className="text-center py-12 bg-white/50 rounded-2xl">
                 <p className="text-gray-500 text-lg">No pins yet. Create your first pin!</p>
