@@ -184,45 +184,6 @@ app.post('/api/login', async (req, res) => {
 
 // === PIN ROUTES ===
 
-// ✅ TEMPORARY FIX: Create Pin without authentication (REPLACE THIS ROUTE ONLY)
-app.post('/api/pins', upload.single('image'), async (req, res) => {
-  try {
-    console.log('Pin creation request received');
-    console.log('Body:', req.body);
-    console.log('File:', req.file);
-
-    if (!req.file) {
-      return res.status(400).json({ msg: 'Image file is required' });
-    }
-
-    const pinData = {
-      title: req.body.title,
-      description: req.body.description || '',
-      image: `/uploads/${req.file.filename}`,
-      userId: 'demo-user-id' // Temporary user ID
-    };
-
-    if (mongoose.connection.readyState === 1) {
-      const newPin = new Pin(pinData);
-      await newPin.save();
-      const populated = await Pin.findById(newPin._id).populate('userId', 'username');
-      res.json(populated);
-    } else {
-      const demoPin = {
-        ...pinData,
-        _id: Date.now().toString(),
-        createdAt: new Date(),
-        userId: 'demo-user-id'
-      };
-      demoPins.push(demoPin);
-      res.json(demoPin);
-    }
-  } catch (err) {
-    console.error('Pin creation error:', err);
-    res.status(500).json({ msg: err.message });
-  }
-});
-
 // GET ALL PINS – SEARCH + PAGINATION (Used by /explore)
 app.get('/api/pins', async (req, res) => {
   try {
@@ -270,23 +231,51 @@ app.get('/api/pins', async (req, res) => {
   }
 });
 
-// ========================
-// ✅ FIXED: Get User Pins (Profile) - UPDATED ROUTE
-// ========================
+// Create Pin (with authentication)
+app.post('/api/pins', authenticate, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ msg: 'Image file is required' });
+    }
+
+    const pinData = {
+      title: req.body.title,
+      description: req.body.description || '',
+      image: `/uploads/${req.file.filename}`,
+      userId: req.user.id // Use authenticated user's ID
+    };
+
+    if (mongoose.connection.readyState === 1) {
+      const newPin = new Pin(pinData);
+      await newPin.save();
+      const populated = await Pin.findById(newPin._id).populate('userId', 'username');
+      res.status(201).json(populated);
+    } else {
+      // Demo mode fallback
+      const demoPin = { ...pinData, _id: Date.now().toString(), createdAt: new Date(), userId: { _id: req.user.id, username: 'demo_user' } };
+      demoPins.push(demoPin);
+      res.status(201).json(demoPin);
+    }
+  } catch (err) {
+    console.error('Pin creation error:', err);
+    res.status(500).json({ msg: err.message });
+  }
+});
+
+// Get User Pins (Profile)
 app.get('/api/pins/user/:userId', async (req, res) => {
   try {
     console.log(`🔄 Fetching pins for user: ${req.params.userId}`);
     
     if (mongoose.connection.readyState === 1) {
-      // Return ALL pins for now (simple fix)
-      const pins = await Pin.find()
+      const pins = await Pin.find({ userId: req.params.userId })
         .sort({ createdAt: -1 })
         .populate('userId', 'username');
       
       console.log(`✅ Found ${pins.length} pins`);
       res.json(pins);
     } else {
-      // Demo mode - return all demo pins
+      // Demo mode - return all demo pins (or filter if you have user info)
       const pins = demoPins;
       console.log(`✅ Demo mode: Found ${pins.length} pins`);
       res.json(pins);
@@ -300,16 +289,20 @@ app.get('/api/pins/user/:userId', async (req, res) => {
   }
 });
 
-// Update Pin - REMOVED AUTHENTICATION
-app.put('/api/pins/:id', async (req, res) => {
+// Update Pin (with authentication)
+app.put('/api/pins/:id', authenticate, async (req, res) => {
   try {
     if (mongoose.connection.readyState === 1) {
-      const pin = await Pin.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      let pin = await Pin.findById(req.params.id);
       if (!pin) return res.status(404).json({ msg: 'Pin not found' });
+      if (pin.userId.toString() !== req.user.id) return res.status(401).json({ msg: 'Not authorized' });
+
+      pin = await Pin.findByIdAndUpdate(req.params.id, req.body, { new: true });
       res.json(pin);
     } else {
       const index = demoPins.findIndex(p => p._id === req.params.id);
       if (index === -1) return res.status(404).json({ msg: 'Not found' });
+      // Add auth check for demo mode if needed
       demoPins[index] = { ...demoPins[index], ...req.body };
       res.json(demoPins[index]);
     }
@@ -317,13 +310,15 @@ app.put('/api/pins/:id', async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 });
-
-// Delete Pin - REMOVED AUTHENTICATION
-app.delete('/api/pins/:id', async (req, res) => {
+// Delete Pin (with authentication)
+app.delete('/api/pins/:id', authenticate, async (req, res) => {
   try {
     if (mongoose.connection.readyState === 1) {
-      const result = await Pin.findByIdAndDelete(req.params.id);
-      if (!result) return res.status(404).json({ msg: 'Pin not found' });
+      const pin = await Pin.findById(req.params.id);
+      if (!pin) return res.status(404).json({ msg: 'Pin not found' });
+      if (pin.userId.toString() !== req.user.id) return res.status(401).json({ msg: 'Not authorized' });
+
+      await Pin.findByIdAndDelete(req.params.id);
       res.json({ msg: 'Deleted' });
     } else {
       demoPins = demoPins.filter(p => p._id !== req.params.id);
@@ -334,74 +329,9 @@ app.delete('/api/pins/:id', async (req, res) => {
   }
 });
 
-// ✅ Create uploads folder (YOUR EXISTING CODE - KEEP AS IS)
-if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
-
-// ========================
-// ✅ TEMPORARY MOCK AUTH ROUTES (ADDED AT THE END)
-// ========================
-
-// Simple mock login that always works
-app.post('/api/simple-login', (req, res) => {
-  console.log('Simple login request:', req.body);
-  
-  const { email, password } = req.body;
-  
-  // Basic validation
-  if (!email || !password) {
-    return res.status(400).json({ 
-      message: 'Email and password are required' 
-    });
-  }
-  
-  if (password.length < 6) {
-    return res.status(400).json({ 
-      message: 'Password should be at least 6 characters' 
-    });
-  }
-  
-  // Always return success for testing
-  res.json({
-    message: 'Login successful (demo mode)',
-    token: 'demo-token-' + Date.now(),
-    user: {
-      id: 1,
-      username: 'demo_user',
-      email: email,
-      avatar: null
-    }
-  });
-});
-
 // Add this with your other routes in server.js
 
 // Get user's pin history
-app.get('/api/history', async (req, res) => {
-  try {
-    let userPins = [];
-    
-    if (mongoose.connection.readyState === 1) {
-      // Get user's pins from MongoDB (you'll need to implement user-specific logic)
-      userPins = await Pin.find()
-        .sort({ createdAt: -1 })
-        .limit(20)
-        .populate('userId', 'username');
-    } else {
-      // Demo mode - return all demo pins
-      userPins = demoPins.slice(0, 20);
-    }
-    
-    res.json(userPins);
-  } catch (err) {
-    console.error('History error:', err);
-    res.status(500).json({ msg: 'Failed to load history' });
-  }
-});
-// Add this with your other PIN ROUTES in backend/server.js
-// ========================
-// ✅ PIN HISTORY ROUTE (ADD THIS)
-// ========================
-
 // Get recent pins for history
 app.get('/api/history', async (req, res) => {
   try {
@@ -431,49 +361,12 @@ app.get('/api/history', async (req, res) => {
     res.status(500).json({ message: 'Error loading history' });
   }
 });
-// Simple mock register that always works
-app.post('/api/simple-register', (req, res) => {
-  console.log('Simple register request:', req.body);
-  
-  const { username, email, password } = req.body;
-  
-  // Basic validation
-  if (!username || !email || !password) {
-    return res.status(400).json({ 
-      message: 'Username, email and password are required' 
-    });
-  }
-  
-  if (password.length < 6) {
-    return res.status(400).json({ 
-      message: 'Password should be at least 6 characters' 
-    });
-  }
-  
-  if (username.length < 3) {
-    return res.status(400).json({ 
-      message: 'Username should be at least 3 characters' 
-    });
-  }
-  
-  // Mock successful registration
-  res.status(201).json({
-    message: 'User registered successfully (demo mode)',
-    token: 'demo-token-' + Date.now(),
-    user: {
-      id: 2,
-      username: username,
-      email: email,
-      avatar: null
-    }
-  });
-});
+
+// ✅ Create uploads folder (YOUR EXISTING CODE - KEEP AS IS)
+if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
 // ✅ Start Server (YOUR EXISTING CODE - KEEP AS IS)
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Test: http://localhost:${PORT}/api/test`);
-  console.log(`Upload Test: http://localhost:${PORT}/api/uploads-list`);
-  console.log(`Demo Login: POST http://localhost:${PORT}/api/simple-login`);
-  console.log(`Demo Register: POST http://localhost:${PORT}/api/simple-register`);
 });
