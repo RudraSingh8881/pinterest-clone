@@ -4,6 +4,8 @@ import { AuthContext } from '../context/AuthContext';
 import { Heart, Download, Edit2, Trash2 } from 'lucide-react';
 
 const PinCard = ({ pin, onEdit, onDelete }) => {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const { user } = useContext(AuthContext);
   const [hovered, setHovered] = useState(false);
   const [liked, setLiked] = useState(pin.likedBy?.includes(user?.id) || false);
@@ -27,7 +29,7 @@ const PinCard = ({ pin, onEdit, onDelete }) => {
       onMouseLeave={() => setHovered(false)}
     >
       <img
-        src={`http://localhost:5000${pin.image}`}
+        src={`${API_URL}${pin.image}`}
         alt={pin.title}
         className="w-full h-auto object-cover rounded-2xl"
       />

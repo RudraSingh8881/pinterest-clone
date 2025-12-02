@@ -7,6 +7,8 @@ import CompressPin from '../components/CompressPin';
 import { Edit2, Trash2, Loader2, Check, X, Upload, User, Mail, Calendar, Share2, MapPin, Lock, Unlock, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Profile = () => {
   const { user } = useContext(AuthContext);
   const [pins, setPins] = useState([]);
@@ -321,7 +323,7 @@ const Profile = () => {
     setEditTitle(pin.title);
     setEditDesc(pin.description);
     setEditImage(null);
-    setEditImagePreview(`http://localhost:5000${pin.image}`);
+    setEditImagePreview(`${API_URL}${pin.image}`);
     setCompressedBlob(null);
   };
 
@@ -345,7 +347,7 @@ const Profile = () => {
 
   const removeEditImage = () => {
     setEditImage(null);
-    setEditImagePreview(`http://localhost:5000${pins.find(p => p._id === editingPin)?.image}`);
+    setEditImagePreview(`${API_URL}${pins.find(p => p._id === editingPin)?.image}`);
     setCompressedBlob(null);
   };
 

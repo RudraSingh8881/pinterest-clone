@@ -5,6 +5,8 @@ import API from '../utils/api';
 import { Home, Search, Plus, User, LogOut, LogIn, History, X, Trash2, Shield, RotateCcw } from 'lucide-react';
 
 const Navbar = () => {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -88,7 +90,7 @@ const Navbar = () => {
       let imageFile = null;
       if (!pinToReuse.imageFile) {
         // Create a blob from the image URL for reuse
-        const response = await fetch(`http://localhost:5000${pinToReuse.image}`);
+        const response = await fetch(`${API_URL}${pinToReuse.image}`);
         const blob = await response.blob();
         imageFile = new File([blob], `reused-${pinToReuse.title}.jpg`, { type: 'image/jpeg' });
       }
@@ -355,7 +357,7 @@ const Navbar = () => {
                               onClick={() => handleReuse(pin)}
                             >
                               <img
-                                src={`http://localhost:5000${pin.image}`}
+                                src={`${API_URL}${pin.image}`}
                                 alt={pin.title}
                                 className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
                                 onError={(e) => {

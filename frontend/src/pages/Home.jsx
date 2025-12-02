@@ -4,6 +4,8 @@ import { getPins, updatePin, deletePin } from '../utils/api';
 import { Image, Sparkles, FileImage } from 'lucide-react';
 
 const Home = () => {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const [pins, setPins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingPin, setEditingPin] = useState(null);
@@ -134,7 +136,7 @@ const Home = () => {
               )}
 
               <img
-                src={`http://localhost:5000${pin.image}`}
+                src={`${API_URL}${pin.image}`}
                 alt={pin.title}
                 className="w-full object-cover"
                 onError={(e) => e.target.src = '/placeholder-image.jpg'}

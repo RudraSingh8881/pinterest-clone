@@ -7,7 +7,7 @@ import CompressPin from '../components/CompressPin';
 
 
 
-
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const CreatePin = () => {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ const CreatePin = () => {
       const pin = location.state.reusePin;
       setTitle(pin.title);
       setDescription(pin.description || '');
-      setPreview(`http://localhost:5000${pin.image}`);
+      setPreview(`${API_URL}${pin.image}`);
     }
   }, [navigate, location]);
   
@@ -56,7 +56,7 @@ const CreatePin = () => {
 
   const checkBackendConnection = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/test');
+      const response = await fetch(`${API_URL}/api/test`);
       return response.ok;
     } catch (err) {
       return false;
@@ -102,7 +102,7 @@ const CreatePin = () => {
         formData.append('image', image);
       } else if (location.state?.reusePin) {
         try {
-          const response = await fetch(`http://localhost:5000${location.state.reusePin.image}`);
+          const response = await fetch(`${API_URL}${location.state.reusePin.image}`);
           if (!response.ok) throw new Error('Failed to fetch image');
           const blob = await response.blob();
           const fileName = `reused-${Date.now()}.jpg`;
@@ -144,7 +144,7 @@ const CreatePin = () => {
     setPreview('');
     setCompressedBlob(null);
     if (location.state?.reusePin) {
-      setPreview(`http://localhost:5000${location.state.reusePin.image}`);
+      setPreview(`${API_URL}${location.state.reusePin.image}`);
     }
   };
 
